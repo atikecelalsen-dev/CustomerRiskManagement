@@ -1,0 +1,178 @@
+﻿
+@{
+    ViewData["Title"] = "Müşteri Risk Yönetimi";
+}
+
+<div class="p-6">
+
+    <div class="mb-5 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-slate-900">Müşteri Risk Yönetimi</h1>
+            <p class="text-sm text-slate-500">
+                Cari bazlı risk limiti ve mevcut risk oranı takibi
+            </p>
+        </div>
+    </div>
+
+
+    <div class="mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="flex gap-3">
+            <input type="text"
+                   id="searchInput"
+                   placeholder="Müşteri kodu veya ünvanı ara..."
+                   class="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" />
+
+            <button type="button"
+                    onclick="loadCustomers(1)"
+                    class="rounded-lg bg-blue-600 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-700">
+                Ara
+            </button>
+        </div>
+    </div>
+
+    <div id="customerListArea">
+        <div class="rounded-xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+            Liste yükleniyor...
+        </div>
+    </div>
+</div>
+
+<div id="customerModal" class="fixed inset-0 z-50 hidden bg-black/50">
+    <div class="flex min-h-screen items-center justify-center p-4">
+        <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+
+            <div class="mb-4 flex items-center justify-between">
+                <h2 class="text-xl font-bold text-slate-900">Müşteri Risk Detayı</h2>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="text-sm text-slate-500">Müşteri Kodu</label>
+                    <div id="modalMusteriKodu" class="font-semibold text-slate-900"></div>
+                </div>
+
+                <div>
+                    <label class="text-sm text-slate-500">Müşteri Ünvanı</label>
+                    <div id="modalMusteriUnvani" class="font-semibold text-slate-900"></div>
+                </div>
+
+                <div>
+                    <label class="text-sm text-slate-500">Tanımlı Risk</label>
+                    <div id="modalTanimliRisk" class="font-semibold text-slate-900"></div>
+                </div>
+
+                <div>
+                    <label class="text-sm text-slate-500">Kalan Risk</label>
+                    <div id="modalKalanRisk" class="font-semibold text-slate-900"></div>
+                </div>
+
+                <div>
+                    <label class="text-sm text-slate-500">Yüzde Durumu</label>
+                    <div id="modalYuzdeDurum" class="font-semibold text-slate-900"></div>
+                </div>
+
+                <div class="flex flex-col">
+                     
+                    <label class="text-sm text-slate-500">Durum</label>
+                    <div id="modalDurum" ></div>
+
+                </div>
+            </div>
+
+
+            <div class="mt-6 flex justify-end gap-2">
+                <button type="button"
+                        onclick="closeModal()"
+                        class="rounded-lg border bg-red-600 px-4 py-2 text-sm text-white">
+                    Kapat
+                </button>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let searchTimer;
+
+    document.addEventListener("DOMContentLoaded", function() {
+        loadCustomers(1);
+
+        document.getElementById("searchInput").addEventListener("input", function() {
+            clearTimeout(searchTimer);
+
+            searchTimer = setTimeout(function() {
+                loadCustomers(1);
+            }, 400);
+        });
+    });
+
+    function loadCustomers(page) {
+        const search = document.getElementById("searchInput").value;
+
+        fetch(`@Url.Action("CustomerList","Home")?search=${encodeURIComponent(search)}&page=${page}`)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById("customerListArea").innerHTML = html;
+            });
+    }
+
+    function openModal( kod, unvan, trisk, krisk, yuzde, durum) {
+            document.getElementById("modalMusteriKodu").innerText = kod;
+        document.getElementById("modalMusteriUnvani").innerText = unvan;
+        document.getElementById("modalTanimliRisk").innerText = trisk + " ₺";
+        document.getElementById("modalKalanRisk").innerText = krisk+ " ₺";
+            document.getElementById("modalYuzdeDurum").innerText = "%" + yuzde;
+
+
+        document.getElementById("modalDurum").className =
+            `text-sm font-semibold ${getStatusClass(durum)}`;
+     document.getElementById("modalDurum").innerText = `${getStatusIcon(durum)} ${durum}`;
+
+     document.getElementById("customerModal").classList.remove("hidden");
+
+    }
+
+
+    function getStatusClass(durum)
+    {
+        switch (durum)
+        {
+            case "Risksiz":
+                return "text-emerald-700";
+
+            case "Düşük Risk":
+                return "text-yellow-700 ";
+
+            case "Yüksek Risk":
+                return " text-orange-700 ";
+
+            default:
+                return "text-red-700 ";
+        }
+    }
+
+    function getStatusIcon(durum)
+{
+    switch (durum)
+    {
+        case "Risksiz":
+            return "🟢";
+
+        case "Düşük Risk":
+            return "🟡";
+
+        case "Yüksek Risk":
+            return "🟠";
+
+        default:
+            return "🔴";
+    }
+}
+
+    function closeModal() {
+        document.getElementById("customerModal").classList.add("hidden");
+    }
+
+   
+</script>

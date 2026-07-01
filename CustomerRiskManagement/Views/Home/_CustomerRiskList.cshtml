@@ -1,0 +1,94 @@
+﻿@model List<CustomerRiskManagement.Models.CustomerRiskViewModel>
+
+@{
+    int page = ViewBag.Page ?? 1;
+    string search = ViewBag.Search as string ?? "";
+}
+
+<div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div class="border-b border-slate-200 px-5 py-4">
+        <h2 class="font-semibold text-slate-800">Cari Risk Listesi</h2>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+            <thead class="bg-slate-100 text-xs text-slate-600 uppercase">
+                <tr> 
+
+                    <th class="table-item font-bold">Müşteri Kodu</th>
+                    <th class="table-item font-bold">Müşteri Ünvanı</th>
+                    <th class="table-item font-bold">Çek Toplam</th>
+                    <th class="table-item font-bold">Senet Toplam</th>
+                    <th class="table-item font-bold">Genel Risk</th>
+                    <th class="table-item font-bold">Tanımlı Risk</th>
+                    <th class="table-item font-bold">Kalan Risk</th>
+                    <th class="table-item font-bold">Risk %</th>
+                    <th class="table-item font-bold">Durum</th>
+                </tr>
+            </thead>
+
+            <tbody class="divide-y divide-slate-100">
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="8" class="px-4 py-8 text-center text-slate-500">
+                            Kayıt bulunamadı.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var item in Model)
+                    {
+                        var statusClass = item.Durum switch
+                            {
+                                "Risksiz" => "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                "Düşük Risk" => "bg-yellow-50 text-yellow-700 border-yellow-200",
+                                "Yüksek Risk" => "bg-orange-50 text-orange-700 border-orange-200",
+                                _ => "bg-red-50 text-red-700 border-red-200"
+                            };
+
+                        <tr onclick="openModal('@item.MusteriKodu', '@item.MusteriUnvani', '@item.TanimliRisk', '@item.KalanRisk', '@item.YuzdeDurum', '@item.Durum')"
+                            class="cursor-pointer hover:bg-slate-50">
+
+                           
+
+                            <td class="table-item">@item.MusteriKodu</td>
+                            <td class="table-item">@item.MusteriUnvani</td>
+                            <td class="table-item">@item.CekToplam.ToString("N2") ₺</td>
+                            <td class="table-item">@item.SenetToplam.ToString("N2") ₺</td>
+                            <td class="table-item">@item.GenelToplam.ToString("N2") ₺</td>
+                            <td class="table-item">@item.TanimliRisk.ToString("N2") ₺</td>
+                            <td class="table-item">@item.KalanRisk.ToString("N2") ₺</td>
+                            <td class="table-item">%@item.YuzdeDurum.ToString("N2")</td>
+                            <td class="py-3">
+                                <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold @statusClass">
+                                    @item.Durum
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mt-5 flex justify-end gap-2">
+    @if (page > 1)
+    {
+        <button type="button"
+                onclick="loadCustomers(@(page - 1))"
+                class="rounded-lg bg-red-500 px-4 py-2 text-sm text-white hover:bg-red-600">
+            Önceki
+        </button>
+    }
+    <div class="rounded-lg bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700">
+        @ViewBag.Page / @ViewBag.TotalPages
+    </div> 
+    <button type="button"
+            onclick="loadCustomers(@(page + 1))"
+            class="rounded-lg bg-red-500 px-4 py-2 text-sm text-white hover:bg-red-600">
+        Sonraki
+    </button>
+</div>
