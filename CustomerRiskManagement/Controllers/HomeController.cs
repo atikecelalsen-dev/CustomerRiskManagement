@@ -1,5 +1,7 @@
+using ClosedXML.Excel;
 using CustomerRiskManagement.Helpers;
 using CustomerRiskManagement.Models;
+using DocumentFormat.OpenXml.EMMA;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Data;
@@ -92,75 +94,135 @@ namespace CustomerRiskManagement.Controllers
 
             return PartialView("_CustomerRiskList", model);
         }
-        //public IActionResult CustomerList(string? search, int page = 1)
-        //{
-        //    int pageSize = 20;
-        //    int offset = (page - 1) * pageSize;
 
 
-        //    string where = "";
-        //    var parameters = new List<SqlParameter>();
+        public IActionResult DownloadExcel(string? search)
+        {
+            string where = "";
+            var parameters = new List<SqlParameter>();
 
-        //    if (!string.IsNullOrWhiteSpace(search))
-        //    {
-        //        where = "WHERE CODE LIKE @search OR DEFINITION_ LIKE @search";
-        //        parameters.Add(new SqlParameter("@search", $"%{search}%"));
-        //    }
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                where = "WHERE CODE LIKE @search OR DEFINITION_ LIKE @search";
+                parameters.Add(new SqlParameter("@search", $"%{search}%"));
+            }
 
-        //    string query = $@"
-        //        SELECT
-        //            CODE,
-        //            DEFINITION_,
-        //            CEKTOPLAM,
-        //            SENETTOPLAM,
-        //            GENELTOPLAM,
-        //            TANIMLI_RISK,
-        //            KALAN_RISK,
-        //            YUZDE_DURUM
-        //        FROM dbo.VW_CARIRISK
-        //        {where}
-        //        ORDER BY CODE
-        //        OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY;
-        //    ";
+            string query = $@"
+                SELECT
+                    CODE,
+                    DEFINITION_,
+                    CEKTOPLAM,
+                    SENETTOPLAM,
+                    GENELTOPLAM,
+                    TANIMLI_RISK,
+                    KALAN_RISK,
+                    YUZDE_DURUM
+                FROM dbo.VW_CARIRISK
+                {where}
+                ORDER BY GENELTOPLAM DESC;
+            ";
 
-        //    parameters.Add(new SqlParameter("@offset", offset));
-        //    parameters.Add(new SqlParameter("@pageSize", pageSize));
+            var dt = _sql.GetDataTable(query, parameters.ToArray());
 
-        //    var dt = _sql.GetDataTable(query, parameters.ToArray());
+            using var workbook = new XLWorkbook();
+            var ws = workbook.Worksheets.Add("Müşteri Risk Raporu");
 
-        //    var model = new List<CustomerRiskViewModel>();
-        //    int sira = offset + 1;
+            int row = 2;
+            int col = 2;
 
-        //    foreach (DataRow row in dt.Rows)
-        //    {
-        //        model.Add(new CustomerRiskViewModel
-        //        {
-        //            SiraNo = sira++,
-        //            MusteriKodu = row["CODE"]?.ToString() ?? "",
-        //            MusteriUnvani = row["DEFINITION_"]?.ToString() ?? "",
+            ws.Cell(row, col).Value = "Müşteri Risk Raporu";
+            ws.Range(row, col, row, col + 8).Merge();
+            ws.Cell(row, col).Style.Font.Bold = true;
+            ws.Cell(row, col).Style.Font.FontSize = 16;
+            ws.Cell(row, col).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
 
-        //            CekToplam = Convert.ToDecimal(row["CEKTOPLAM"]),
-        //            SenetToplam = Convert.ToDecimal(row["SENETTOPLAM"]),
-        //            GenelToplam = Convert.ToDecimal(row["GENELTOPLAM"]),
-        //            TanimliRisk = Convert.ToDecimal(row["TANIMLI_RISK"]),
-        //            KalanRisk = Convert.ToDecimal(row["KALAN_RISK"]),
-        //            YuzdeDurum = Convert.ToDecimal(row["YUZDE_DURUM"]),
+            row += 2;
 
-        //            Durum = GetDurum(Convert.ToDecimal(row["YUZDE_DURUM"]))
-        //        });
-        //    }
+            ws.Cell(row, col).Value = "Rapor Tarihi: ";
+            ws.Cell(row, col + 1).Value = DateTime.Now.ToString("dd.MM.yyyy HH:mm");
+            row += 2;
 
-        //    ViewBag.Page = page;
-        //    ViewBag.Search = search;
+            string[] headers =
+            {
+                "Sıra",
+                "Müşteri Kodu",
+                "Müşteri Ünvanı",
+                "Çek Toplam",
+                "Senet Toplam",
+                "Genel Toplam",
+                "Tanımlı Risk",
+                "Kalan Risk",
+                "Risk %",
+                "Risk Durumu"
+            };
 
-        //    int totalCount = GetTotalCustomerCount(search);
+            for (int i = 0; i < headers.Length; i++)
+                ws.Cell(row, col + i).Value = headers[i];
 
-        //    ViewBag.TotalPages =
-        //        (int)Math.Ceiling((double)totalCount / pageSize);
+            var headerRange = ws.Range(row, col, row, col + headers.Length - 1);
+            headerRange.Style.Font.Bold = true;
+            headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+            headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            headerRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
 
+            row++;
 
-        //    return PartialView("_CustomerRiskList", model);
-        //}
+            int sira = 1;
+
+            foreach (DataRow dr in dt.Rows)
+            {
+                ws.Cell(row, col).Value = sira++;
+                ws.Cell(row, col + 1).Value = dr["CODE"]?.ToString();
+                ws.Cell(row, col + 2).Value = dr["DEFINITION_"]?.ToString();
+
+                ws.Cell(row, col + 3).Value = dr.IsNull("CEKTOPLAM") ? 0 : Convert.ToDecimal(dr["CEKTOPLAM"]);
+                ws.Cell(row, col + 4).Value = dr.IsNull("SENETTOPLAM") ? 0 : Convert.ToDecimal(dr["SENETTOPLAM"]);
+                ws.Cell(row, col + 5).Value = dr.IsNull("GENELTOPLAM") ? 0 : Convert.ToDecimal(dr["GENELTOPLAM"]);
+                ws.Cell(row, col + 6).Value = dr.IsNull("TANIMLI_RISK") ? 0 : Convert.ToDecimal(dr["TANIMLI_RISK"]);
+                ws.Cell(row, col + 7).Value = dr.IsNull("KALAN_RISK") ? 0 : Convert.ToDecimal(dr["KALAN_RISK"]);
+                ws.Cell(row, col + 8).Value = dr.IsNull("YUZDE_DURUM") ? 0 : Convert.ToDecimal(dr["YUZDE_DURUM"]);
+
+                ws.Cell(row, col + 9).Value = GetDurum(dr.IsNull("GENELTOPLAM") ? 0 : Convert.ToDecimal(dr["GENELTOPLAM"]), 
+                    dr.IsNull("TANIMLI_RISK") ? 0 : Convert.ToDecimal(dr["TANIMLI_RISK"]));
+
+                row++;
+            }
+
+            int totalRow = row;
+
+            ws.Cell(totalRow, col + 2).Value = "TOPLAM";
+            ws.Cell(totalRow, col + 3).FormulaA1 = $"SUM(E6:E{totalRow - 1})";
+            ws.Cell(totalRow, col + 4).FormulaA1 = $"SUM(F6:F{totalRow - 1})";
+            ws.Cell(totalRow, col + 5).FormulaA1 = $"SUM(G6:G{totalRow - 1})";
+            ws.Cell(totalRow, col + 6).FormulaA1 = $"SUM(H6:H{totalRow - 1})";
+            ws.Cell(totalRow, col + 7).FormulaA1 = $"SUM(I6:I{totalRow - 1})";
+
+            var totalRange = ws.Range(totalRow, col, totalRow, col + headers.Length - 1);
+            totalRange.Style.Font.Bold = true;
+            totalRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+            totalRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            totalRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+            ws.Range(5,col+9, row, col+9).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+
+            var fullRange = ws.Range(6, col, totalRow, col + headers.Length - 1);
+            fullRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            fullRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+            ws.Columns().AdjustToContents();
+
+            ws.Columns(col + 3, col + 7).Style.NumberFormat.Format = "#,##0.00 ₺";
+            ws.Column(col + 8).Style.NumberFormat.Format = "0.00";
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            return File(
+                stream.ToArray(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"MusteriRiskRaporu_{DateTime.Now:yyyyMMddHHmm}.xlsx"
+            );
+        }
 
 
         private int GetTotalCustomerCount(string? search)
