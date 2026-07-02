@@ -28,7 +28,8 @@
                 Ara
             </button>
 
-            <button onclick="downloadExcel()"
+            <button onclick="downloadExcel()" 
+                type="button"
                     class="rounded-xl bg-green-600 px-6 py-2 text-sm font-semibold whitespace-nowrap text-white hover:bg-green-700">
                 Excel İndir 
             </button>
@@ -113,8 +114,10 @@
     });
 
     function downloadExcel(){
-        const search = document.getElementById("searchInput")?.value || '';
-        const url = '/Home/DownloadExcel?search=' + encodeURIComponent(search);
+        console.log("Buton calisti");
+        const search = document.getElementById("searchInput")?.value || ''
+
+        const url = (`@Url.Action("DownloadExcel", "Home")?search=${encodeURIComponent(search)}`);
         window.location.href = url;
 
 
