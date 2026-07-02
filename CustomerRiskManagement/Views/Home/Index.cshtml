@@ -114,13 +114,9 @@
     });
 
     function downloadExcel(){
-        console.log("Buton calisti");
         const search = document.getElementById("searchInput")?.value || ''
-
         const url = (`@Url.Action("DownloadExcel", "Home")?search=${encodeURIComponent(search)}`);
         window.location.href = url;
-
-
     }
 
 
